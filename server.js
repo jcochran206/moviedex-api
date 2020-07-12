@@ -1,60 +1,48 @@
-require('dotenv').config()
-const express = require('express')
-const morgan = require('morgan')
-const cors = require('cors')
-const helmet = require('helmet')
-const MOVIEDEX = require('./moviedex.json')
+require("dotenv").config();
+const express = require("express");
+const morgan = require("morgan");
+const cors = require("cors");
+const helmet = require("helmet");
+const MOVIEDEX = require("./moviedex.json");
+const { validateToken } = require('./middelwares/authenticate.js');
 
-const app = express()
+const app = express();
 
-app.use(morgan('dev'))
-app.use(helmet())
-app.use(cors())
+app.use(morgan('tiny'));
+app.use(helmet());
+app.use(cors());
+app.use(validateToken);
 
-app.use(function validateBearerToken(req, res, next) {
-  const apiToken = process.env.API_TOKEN
-  const authToken = req.get('Authorization')
+app.get("/movie", function handleGetMovie(req, res) {
+  let response = MOVIEDEX;
 
-  if (!authToken || authToken.split(' ')[1] !== apiToken) {
-    return res.status(401).json({ error: 'Unauthorized request' })
+  // filter by country
+  if (req.query.country) {
+    response = response.filter((movie) =>
+      // case insensitive searching
+      movie.country.toLowerCase().includes(req.query.country.toLowerCase())
+    );
   }
-  // move to the next middleware
-  next()
-})
 
+  // filter by genre if type query param is present
+  if (req.query.genre) {
+    response = response.filter((movie) =>
+      movie.genre.includes(req.query.genre)
+    );
+  }
 
-app.get('/movie', function handleGetMovie(req, res) {
-    let response = MOVIEDEX;
+  if (req.query.avg_vote) {
+    console.log(req.query.avg_vote);
+    response = response.filter(
+      (movie) => Number(movie.avg_vote) >= Number(req.query.avg_vote)
+    );
+  }
 
-    // filter by country 
-    if (req.query.country) {
-      response = response.filter(movie =>
-        // case insensitive searching
-        movie.country.toLowerCase().includes(req.query.country.toLowerCase())
-      )
-    }
-  
-    // filter by genre if type query param is present
-    if (req.query.genre) {
-      response = response.filter(movie =>
-        movie.genre.includes(req.query.genre)
-      )
-    }
+  res.json(response);
+});
 
-    if (req.query.avg_vote) {
-        console.log(req.query.avg_vote)
-        response = response.filter(movie =>
-          Number(movie.avg_vote) >= Number(req.query.avg_vote)
-        )
-      }
-
-
-  
-    res.json(response)
-})
-
-const PORT = 8000
+const PORT = 8000;
 
 app.listen(PORT, () => {
-  console.log(`Server listening at http://localhost:${PORT}`)
-})
+  console.log(`Server listening at http://localhost:${PORT}`);
+});
