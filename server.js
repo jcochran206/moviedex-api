@@ -5,11 +5,12 @@ const cors = require("cors");
 const helmet = require("helmet");
 const MOVIEDEX = require("./moviedex.json");
 const { validateToken } = require("./middelwares/authenticate.js");
+const { query } = require("express");
 
 const app = express();
 
-const morganSetting = process.env.NODE_ENV === 'production' ? 'tiny' : 'common'
-app.use(morgan(morganSetting))
+const morganSetting = process.env.NODE_ENV === "production" ? "tiny" : "common";
+app.use(morgan(morganSetting));
 app.use(helmet());
 app.use(cors());
 app.use(validateToken);
@@ -17,39 +18,39 @@ app.use(validateToken);
 app.get("/movie", function handleGetMovie(req, res) {
   let response = MOVIEDEX;
 
-  // filter by country
-  if (req.query.country) {
+  const { avg_vote, country, genre} = req.query
+
+  
+  if (avg_vote) {
+    response = response.filter((movie) => {
+      return parseFloat( movie.avg_vote) >=  parseFloat(avg_vote)
+    });
+  }
+  if (country) {
     response = response.filter((movie) =>
-      // case insensitive searching
-      movie.country.toLowerCase().includes(req.query.country.toLowerCase())
+      movie.country.toLowerCase().includes(country.toLowerCase())
     );
   }
 
-  // filter by genre if type query param is present
-  if (req.query.genre) {
+  if (genre) {
     response = response.filter((movie) =>
-      movie.genre.toLowerCase().includes(req.query.genre.toLocaleLowerCase())
+      movie.genre.toLowerCase().includes(genre.toLocaleLowerCase())
     );
   }
 
-  if (req.query.avg_vote) {
-    response = response.filter(
-      (movie) => parseInt(movie.avg_vote) >= parseInt(req.query.avg_vote)
-    );
-  }
 
   res.json(response);
 });
 
 app.use((error, req, res, next) => {
-  let response
-  if (process.env.NODE_ENV === 'production') {
-    response = { error: { message: 'server error' }}
+  let response;
+  if (process.env.NODE_ENV === "production") {
+    response = { error: { message: "server error" } };
   } else {
-    response = { error }
+    response = { error };
   }
-  res.status(500).json(response)
-})
+  res.status(500).json(response);
+});
 
 const PORT = process.env.PORT || 8000;
 
